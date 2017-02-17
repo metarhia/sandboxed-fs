@@ -1,0 +1,31 @@
+{
+  "name": "sandboxed-fs",
+  "version": "0.0.1",
+  "author": "Nikolay Belochub <nbelochub@gmail.com>",
+  "description": "Sandboxed Wrapper for Node.js File System API",
+  "license": "MIT",
+  "keywords": [
+    "fs",
+    "metarhia",
+    "impress",
+    "sandbox",
+    "sandboxed",
+    "application"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/metarhia/sandboxed-fs"
+  },
+  "bugs": {
+    "url": "https://github.com/metarhia/sandboxed-fs/issues",
+    "email": "nbelochub@gmail.com"
+  },
+  "main": "./sandboxed-fs.js",
+  "engines": {
+    "node": ">=6.0.0"
+  },
+  "readmeFilename": "README.md",
+  "scripts": {
+    "test": "node ./test.js"
+  }
+}
