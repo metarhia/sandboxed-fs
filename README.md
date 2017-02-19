@@ -1,7 +1,7 @@
 ## sandboxedFs
 
 sandboxedFs is a sandboxed wrapper for Node.js file system module implementing
-the same API but binded to certain directory, reliably locked in it
+the same API but bound to a certain directory, reliably locked in it.
 
 ## Usage
 
