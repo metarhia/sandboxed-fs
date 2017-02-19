@@ -21,6 +21,9 @@
     "email": "nbelochub@gmail.com"
   },
   "main": "./sandboxed-fs.js",
+  "devDependencies": {
+    "eslint": "^3.15.0"
+  },
   "engines": {
     "node": ">=6.0.0"
   },
