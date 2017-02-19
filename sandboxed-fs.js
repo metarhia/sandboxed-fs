@@ -25,7 +25,7 @@ const fileFunctionsWrapper = (func, path) => (file, ...args) => {
     return func(pathModule.join(path, makePathSafe(file)), ...args);
   }
   if (typeof file === 'number') {
-    return func(p, ...args);
+    return func(file, ...args);
   }
 
   throw new TypeError(errorMessage);
