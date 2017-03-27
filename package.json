@@ -1,6 +1,6 @@
 {
   "name": "sandboxed-fs",
-  "version": "0.0.2",
+  "version": "0.1.0",
   "author": "Mykola Bilochub <nbelochub@gmail.com>",
   "description": "Sandboxed Wrapper for Node.js File System API",
   "license": "MIT",
