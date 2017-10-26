@@ -9,7 +9,9 @@ const pathModule = require('path');
 const errorMessage = 'path must be a string';
 
 function makePathSafe(path) {
-  return pathModule.resolve('/', path);
+  const safePath = pathModule.resolve('/', path);
+
+  return safePath.substring(pathModule.parse(safePath).root.length);
 }
 
 const pathFunctionsWrapper = (func, path) => (p, ...args) => {
