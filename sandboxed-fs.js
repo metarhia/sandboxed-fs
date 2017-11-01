@@ -5,13 +5,25 @@ module.exports = sandboxedFs;
 
 const fs = require('fs');
 const pathModule = require('path');
+const isWindows = require('is-windows');
+const isUncPath = require('is-unc-path');
 
 const errorMessage = 'path must be a string';
 
 function makePathSafe(path) {
   const safePath = pathModule.resolve('/', path);
 
-  return safePath.substring(pathModule.parse(safePath).root.length);
+  // As Windows is the only non-UNIX like platform supported by node (https://github.com/nodejs/node/blob/master/BUILDING.md#supported-platforms-1)
+  if (isWindows()) {
+    if (isUncPath(safePath)) {
+      return safePath.substring(pathModule.parse(safePath).root.length);
+    } else {
+      // If the path is a non-unc path on windows, the root is fixed to 3 characters like 'C:\'
+      return safePath.substring(3);
+    }
+  }
+
+  return safePath;
 }
 
 const pathFunctionsWrapper = (func, path) => (p, ...args) => {
