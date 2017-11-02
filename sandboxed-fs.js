@@ -5,8 +5,12 @@ module.exports = sandboxedFs;
 
 const fs = require('fs');
 const pathModule = require('path');
-const isWindows = require('is-windows');
-const isUncPath = require('is-unc-path');
+const isWindows = process.platform === 'win32' ||
+      process.env.OSTYPE === 'cygwin' ||
+      process.env.OSTYPE === 'msys';
+const isUncPath = function (path) {
+  return /^[\\\/]{2,}[^\\\/]+[\\\/]+[^\\\/]+/.test(path);
+};
 
 const errorMessage = 'path must be a string';
 
@@ -15,7 +19,7 @@ function makePathSafe(path) {
 
   // As Windows is the only non-UNIX like platform supported by node
   // https://github.com/nodejs/node/blob/master/BUILDING.md#supported-platforms-1
-  if (isWindows()) {
+  if (isWindows) {
     if (isUncPath(safePath)) {
       return safePath.substring(pathModule.parse(safePath).root.length);
     } else {

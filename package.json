@@ -31,9 +31,5 @@
   "scripts": {
     "test": "node ./test.js",
     "lint": "eslint ."
-  },
-  "dependencies": {
-    "is-unc-path": "^1.0.0",
-    "is-windows": "^1.0.1"
   }
 }
