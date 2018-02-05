@@ -8,8 +8,8 @@ const pathModule = require('path');
 const isWindows = process.platform === 'win32' ||
       process.env.OSTYPE === 'cygwin' ||
       process.env.OSTYPE === 'msys';
-const isUncPath = function (path) {
-  return /^[\\\/]{2,}[^\\\/]+[\\\/]+[^\\\/]+/.test(path);
+const isUncPath = function(path) {
+  return /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 };
 
 const errorMessage = 'path must be a string';
