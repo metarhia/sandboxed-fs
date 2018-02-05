@@ -53,8 +53,11 @@ const fileFunctionsWrapper = (func, path) => (file, ...args) => {
 
 const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) => {
   if (typeof p1 === 'string' || typeof p2 === 'string') {
-    return func(pathModule.join(path, makePathSafe(p1)),
-                pathModule.join(path, makePathSafe(p2)), ...args);
+    return func(
+      pathModule.join(path, makePathSafe(p1)),
+      pathModule.join(path, makePathSafe(p2)),
+      ...args
+    );
   }
 
   throw new TypeError(errorMessage);
