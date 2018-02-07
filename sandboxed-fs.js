@@ -40,6 +40,14 @@ const pathFunctionsWrapper = (func, path) => (p, ...args) => {
   throw new TypeError(errorMessage);
 };
 
+const pathFunctionsWithNativeWrapper = (func, path) => {
+  const f = pathFunctionsWrapper(func, path);
+  if (func.native) {
+    f.native = pathFunctionsWrapper(func.native, path);
+  }
+  return f;
+};
+
 const fileFunctionsWrapper = (func, path) => (file, ...args) => {
   if (typeof file === 'string') {
     return func(pathModule.join(path, makePathSafe(file)), ...args);
@@ -70,13 +78,14 @@ const functionTypes = {
       'chmod',
       'chown',
       'exists',
+      'lchmod',
+      'lchown',
       'lstat',
       'mkdir',
       'mkdtemp',
       'open',
       'readdir',
       'readlink',
-      'realpath',
       'rmdir',
       'stat',
       'truncate',
@@ -84,6 +93,13 @@ const functionTypes = {
       'utimes'
     ],
     wrapper: pathFunctionsWrapper,
+    hasSyncCounterpart: true
+  },
+  pathFunctionsWithNative: {
+    names: [
+      'realpath'
+    ],
+    wrapper: pathFunctionsWithNativeWrapper,
     hasSyncCounterpart: true
   },
   pathNonSyncFunctions: {
@@ -108,6 +124,7 @@ const functionTypes = {
   },
   twoPathFunctions: {
     names: [
+      'copyFile',
       'link',
       'rename',
       'symlink'
@@ -123,6 +140,7 @@ sandboxedFs.bind = (path) => {
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
+      if (!fs[name]) continue;
       wrapped[name] = type.wrapper(fs[name], path);
       if (type.hasSyncCounterpart) {
         const syncName = name + 'Sync';
