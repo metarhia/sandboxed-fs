@@ -5,14 +5,13 @@ module.exports = sandboxedFs;
 
 const fs = require('fs');
 const pathModule = require('path');
+const { URL } = require('url');
 const isWindows = process.platform === 'win32' ||
       process.env.OSTYPE === 'cygwin' ||
       process.env.OSTYPE === 'msys';
 const isUncPath = function(path) {
   return /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 };
-
-const errorMessage = 'path must be a string';
 
 function makePathSafe(path) {
   const safePath = pathModule.resolve('/', path);
@@ -32,13 +31,26 @@ function makePathSafe(path) {
   return safePath;
 }
 
-const pathFunctionsWrapper = (func, path) => (p, ...args) => {
-  if (typeof p === 'string') {
-    return func(pathModule.join(path, makePathSafe(p)), ...args);
+function makeFsArgSafe(arg, path) {
+  if (typeof arg === 'string') {
+    arg = pathModule.join(path, makePathSafe(arg));
+  } else if (Buffer.isBuffer(arg)) {
+    arg = pathModule.join(path, makePathSafe(arg.toString()));
+  } else if (arg instanceof URL && arg.protocol === 'file:') {
+    arg.pathname = pathModule.join(path, makePathSafe(arg.pathname));
   }
+  return arg;
+}
 
-  throw new TypeError(errorMessage);
+const stringPathFunctionsWrapper = (func, path) => (p, ...args) => {
+  if (typeof p === 'string') {
+    p = pathModule.join(path, makePathSafe(p));
+  }
+  return func(p, ...args);
 };
+
+const pathFunctionsWrapper = (func, path) => (p, ...args) =>
+  func(makeFsArgSafe(p, path), ...args);
 
 const pathFunctionsWithNativeWrapper = (func, path) => {
   const f = pathFunctionsWrapper(func, path);
@@ -49,27 +61,19 @@ const pathFunctionsWithNativeWrapper = (func, path) => {
 };
 
 const fileFunctionsWrapper = (func, path) => (file, ...args) => {
-  if (typeof file === 'string') {
-    return func(pathModule.join(path, makePathSafe(file)), ...args);
-  }
   if (typeof file === 'number') {
     return func(file, ...args);
   }
 
-  throw new TypeError(errorMessage);
+  return func(makeFsArgSafe(file, path), ...args);
 };
 
-const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) => {
-  if (typeof p1 === 'string' || typeof p2 === 'string') {
-    return func(
-      pathModule.join(path, makePathSafe(p1)),
-      pathModule.join(path, makePathSafe(p2)),
-      ...args
-    );
-  }
-
-  throw new TypeError(errorMessage);
-};
+const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) =>
+  func(
+    makeFsArgSafe(p1, path),
+    makeFsArgSafe(p2, path),
+    ...args
+  );
 
 const functionTypes = {
   pathFunctions: {
@@ -82,7 +86,6 @@ const functionTypes = {
       'lchown',
       'lstat',
       'mkdir',
-      'mkdtemp',
       'open',
       'readdir',
       'readlink',
@@ -93,6 +96,13 @@ const functionTypes = {
       'utimes'
     ],
     wrapper: pathFunctionsWrapper,
+    hasSyncCounterpart: true
+  },
+  stringPathFunctions: {
+    names: [
+      'mkdtemp'
+    ],
+    wrapper: stringPathFunctionsWrapper,
     hasSyncCounterpart: true
   },
   pathFunctionsWithNative: {
