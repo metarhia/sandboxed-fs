@@ -6,14 +6,16 @@ module.exports = sandboxedFs;
 const fs = require('fs');
 const pathModule = require('path');
 const { URL } = require('url');
-const isWindows = process.platform === 'win32' ||
-      process.env.OSTYPE === 'cygwin' ||
-      process.env.OSTYPE === 'msys';
-const isUncPath = function(path) {
-  return /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
-};
 
-function makePathSafe(path) {
+const isWindows = (
+  process.platform === 'win32' ||
+  process.env.OSTYPE === 'cygwin' ||
+  process.env.OSTYPE === 'msys'
+);
+
+const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
+
+const makePathSafe = (path) => {
   const safePath = pathModule.resolve('/', path);
 
   // As Windows is the only non-UNIX like platform supported by node
@@ -29,9 +31,9 @@ function makePathSafe(path) {
   }
 
   return safePath;
-}
+};
 
-function makeFsArgSafe(arg, path) {
+const makeFsArgSafe = (arg, path) => {
   if (typeof arg === 'string') {
     arg = pathModule.join(path, makePathSafe(arg));
   } else if (Buffer.isBuffer(arg)) {
@@ -40,7 +42,7 @@ function makeFsArgSafe(arg, path) {
     arg.pathname = pathModule.join(path, makePathSafe(arg.pathname));
   }
   return arg;
-}
+};
 
 const stringPathFunctionsWrapper = (func, path) => (p, ...args) => {
   if (typeof p === 'string') {
@@ -49,8 +51,9 @@ const stringPathFunctionsWrapper = (func, path) => (p, ...args) => {
   return func(p, ...args);
 };
 
-const pathFunctionsWrapper = (func, path) => (p, ...args) =>
-  func(makeFsArgSafe(p, path), ...args);
+const pathFunctionsWrapper = (func, path) =>
+  (p, ...args) =>
+    func(makeFsArgSafe(p, path), ...args);
 
 const pathFunctionsWithNativeWrapper = (func, path) => {
   const f = pathFunctionsWrapper(func, path);
@@ -64,7 +67,6 @@ const fileFunctionsWrapper = (func, path) => (file, ...args) => {
   if (typeof file === 'number') {
     return func(file, ...args);
   }
-
   return func(makeFsArgSafe(file, path), ...args);
 };
 
@@ -150,8 +152,9 @@ sandboxedFs.bind = (path) => {
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
-      if (!fs[name]) continue;
-      wrapped[name] = type.wrapper(fs[name], path);
+      const fn = fs[name];
+      if (!fn) continue;
+      wrapped[name] = type.wrapper(fn, path);
       if (type.hasSyncCounterpart) {
         const syncName = name + 'Sync';
         wrapped[syncName] = type.wrapper(fs[syncName], path);
