@@ -5,7 +5,3 @@ node_js:
   - 9
 script:
   - npm test
-  - npm run lint
-branches:
-  only:
-    - master
