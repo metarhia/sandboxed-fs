@@ -13,9 +13,7 @@ const isWindows = (
   process.env.OSTYPE === 'msys'
 );
 
-const isUncPath = (path) => (
-  /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path)
-);
+const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 
 const makePathSafe = (path) => {
   const safePath = pathModule.resolve('/', path);
@@ -53,9 +51,9 @@ const stringPathFunctionsWrapper = (func, path) => (p, ...args) => {
   return func(p, ...args);
 };
 
-const pathFunctionsWrapper = (func, path) => (p, ...args) => (
-  func(makeFsArgSafe(p, path), ...args)
-);
+const pathFunctionsWrapper = (func, path) =>
+  (p, ...args) =>
+    func(makeFsArgSafe(p, path), ...args);
 
 const pathFunctionsWithNativeWrapper = (func, path) => {
   const f = pathFunctionsWrapper(func, path);
@@ -72,13 +70,12 @@ const fileFunctionsWrapper = (func, path) => (file, ...args) => {
   return func(makeFsArgSafe(file, path), ...args);
 };
 
-const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) => (
+const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) =>
   func(
     makeFsArgSafe(p1, path),
     makeFsArgSafe(p2, path),
     ...args
-  )
-);
+  );
 
 const functionTypes = {
   pathFunctions: {
