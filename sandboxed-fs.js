@@ -4,6 +4,7 @@ const sandboxedFs = {};
 module.exports = sandboxedFs;
 
 const fs = require('fs');
+const os = require('os');
 const pathModule = require('path');
 const { URL } = require('url');
 
@@ -15,8 +16,12 @@ const isWindows = (
 
 const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 
-const makePathSafe = (path) => {
+const makePathSafe = (path, allowTmp) => {
   const safePath = pathModule.resolve('/', path);
+
+  if (allowTmp && safePath.startsWith(os.tmpdir())) {
+    return safePath;
+  }
 
   // As Windows is the only non-UNIX like platform supported by node
   // https://github.com/nodejs/node/blob/master/BUILDING.md#supported-platforms-1
@@ -33,47 +38,56 @@ const makePathSafe = (path) => {
   return safePath;
 };
 
-const makeFsArgSafe = (arg, path) => {
-  if (typeof arg === 'string') {
-    arg = pathModule.join(path, makePathSafe(arg));
-  } else if (Buffer.isBuffer(arg)) {
-    arg = pathModule.join(path, makePathSafe(arg.toString()));
+const makeFsArgSafe = (arg, path, allowTmp) => {
+  let safePath;
+  if (typeof arg === 'string' || Buffer.isBuffer(arg)) {
+    safePath = makePathSafe(arg.toString(), allowTmp);
+    if (allowTmp && safePath.startsWith(os.tmpdir())) {
+      arg = safePath;
+    } else {
+      arg = pathModule.join(path, safePath);
+    }
   } else if (arg instanceof URL && arg.protocol === 'file:') {
-    arg.pathname = pathModule.join(path, makePathSafe(arg.pathname));
+    safePath = makePathSafe(arg.pathname, allowTmp);
+    if (allowTmp && safePath.startsWith(os.tmpdir())) {
+      arg.pathname = safePath;
+    } else {
+      arg.pathname = pathModule.join(path, safePath);
+    }
   }
   return arg;
 };
 
-const stringPathFunctionsWrapper = (func, path) => (p, ...args) => {
+const stringPathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) => {
   if (typeof p === 'string') {
-    p = pathModule.join(path, makePathSafe(p));
+    p = pathModule.join(path, makePathSafe(p, allowTmp));
   }
   return func(p, ...args);
 };
 
-const pathFunctionsWrapper = (func, path) =>
+const pathFunctionsWrapper = (func, path, allowTmp) =>
   (p, ...args) =>
-    func(makeFsArgSafe(p, path), ...args);
+    func(makeFsArgSafe(p, path, allowTmp), ...args);
 
-const pathFunctionsWithNativeWrapper = (func, path) => {
-  const f = pathFunctionsWrapper(func, path);
+const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
+  const f = pathFunctionsWrapper(func, path, allowTmp);
   if (func.native) {
-    f.native = pathFunctionsWrapper(func.native, path);
+    f.native = pathFunctionsWrapper(func.native, path, allowTmp);
   }
   return f;
 };
 
-const fileFunctionsWrapper = (func, path) => (file, ...args) => {
+const fileFunctionsWrapper = (func, path, allowTmp) => (file, ...args) => {
   if (typeof file === 'number') {
     return func(file, ...args);
   }
-  return func(makeFsArgSafe(file, path), ...args);
+  return func(makeFsArgSafe(file, path, allowTmp), ...args);
 };
 
-const twoPathFunctionsWrapper = (func, path) => (p1, p2, ...args) =>
+const twoPathFunctionsWrapper = (func, path, allowTmp) => (p1, p2, ...args) =>
   func(
-    makeFsArgSafe(p1, path),
-    makeFsArgSafe(p2, path),
+    makeFsArgSafe(p1, path, allowTmp),
+    makeFsArgSafe(p2, path, allowTmp),
     ...args
   );
 
@@ -146,7 +160,7 @@ const functionTypes = {
   }
 };
 
-sandboxedFs.bind = (path) => {
+sandboxedFs.bind = (path, allowTmp = true) => {
   const wrapped = Object.assign({}, fs);
 
   for (const typeName of Object.keys(functionTypes)) {
@@ -154,10 +168,10 @@ sandboxedFs.bind = (path) => {
     for (const name of type.names) {
       const fn = fs[name];
       if (!fn) continue;
-      wrapped[name] = type.wrapper(fn, path);
+      wrapped[name] = type.wrapper(fn, path, allowTmp);
       if (type.hasSyncCounterpart) {
         const syncName = name + 'Sync';
-        wrapped[syncName] = type.wrapper(fs[syncName], path);
+        wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
       }
     }
   }
