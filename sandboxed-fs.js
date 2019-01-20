@@ -8,13 +8,12 @@ const os = require('os');
 const pathModule = require('path');
 const { URL } = require('url');
 
-const isWindows = (
+const isWindows =
   process.platform === 'win32' ||
   process.env.OSTYPE === 'cygwin' ||
-  process.env.OSTYPE === 'msys'
-);
+  process.env.OSTYPE === 'msys';
 
-const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
+const isUncPath = path => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 
 const makePathSafe = (path, allowTmp) => {
   const safePath = pathModule.resolve('/', path);
@@ -65,9 +64,8 @@ const stringPathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) => {
   return func(p, ...args);
 };
 
-const pathFunctionsWrapper = (func, path, allowTmp) =>
-  (p, ...args) =>
-    func(makeFsArgSafe(p, path, allowTmp), ...args);
+const pathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) =>
+  func(makeFsArgSafe(p, path, allowTmp), ...args);
 
 const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
   const f = pathFunctionsWrapper(func, path, allowTmp);
@@ -109,24 +107,20 @@ const functionTypes = {
       'stat',
       'truncate',
       'unlink',
-      'utimes'
+      'utimes',
     ],
     wrapper: pathFunctionsWrapper,
-    hasSyncCounterpart: true
+    hasSyncCounterpart: true,
   },
   stringPathFunctions: {
-    names: [
-      'mkdtemp'
-    ],
+    names: ['mkdtemp'],
     wrapper: stringPathFunctionsWrapper,
-    hasSyncCounterpart: true
+    hasSyncCounterpart: true,
   },
   pathFunctionsWithNative: {
-    names: [
-      'realpath'
-    ],
+    names: ['realpath'],
     wrapper: pathFunctionsWithNativeWrapper,
-    hasSyncCounterpart: true
+    hasSyncCounterpart: true,
   },
   pathNonSyncFunctions: {
     names: [
@@ -134,30 +128,21 @@ const functionTypes = {
       'createWriteStream',
       'unwatchFile',
       'watch',
-      'watchFile'
+      'watchFile',
     ],
     wrapper: pathFunctionsWrapper,
-    hasSyncCounterpart: false
+    hasSyncCounterpart: false,
   },
   fileFunctions: {
-    names: [
-      'appendFile',
-      'readFile',
-      'writeFile'
-    ],
+    names: ['appendFile', 'readFile', 'writeFile'],
     wrapper: fileFunctionsWrapper,
-    hasSyncCounterpart: true
+    hasSyncCounterpart: true,
   },
   twoPathFunctions: {
-    names: [
-      'copyFile',
-      'link',
-      'rename',
-      'symlink'
-    ],
+    names: ['copyFile', 'link', 'rename', 'symlink'],
     wrapper: twoPathFunctionsWrapper,
-    hasSyncCounterpart: true
-  }
+    hasSyncCounterpart: true,
+  },
 };
 
 sandboxedFs.bind = (path, allowTmp = true) => {
