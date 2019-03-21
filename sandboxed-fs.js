@@ -89,6 +89,9 @@ const twoPathFunctionsWrapper = (func, path, allowTmp) => (p1, p2, ...args) =>
     ...args
   );
 
+const asyncWrapper = wrapper => (...wrapperArgs) => async (...args) =>
+  wrapper(...wrapperArgs)(...args);
+
 const functionTypes = {
   pathFunctions: {
     names: [
@@ -110,16 +113,19 @@ const functionTypes = {
       'utimes',
     ],
     wrapper: pathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(pathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   stringPathFunctions: {
     names: ['mkdtemp'],
     wrapper: stringPathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(stringPathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   pathFunctionsWithNative: {
     names: ['realpath'],
     wrapper: pathFunctionsWithNativeWrapper,
+    asyncWrapper: asyncWrapper(pathFunctionsWithNativeWrapper),
     hasSyncCounterpart: true,
   },
   pathNonSyncFunctions: {
@@ -136,27 +142,36 @@ const functionTypes = {
   fileFunctions: {
     names: ['appendFile', 'readFile', 'writeFile'],
     wrapper: fileFunctionsWrapper,
+    asyncWrapper: asyncWrapper(fileFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   twoPathFunctions: {
     names: ['copyFile', 'link', 'rename', 'symlink'],
     wrapper: twoPathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(twoPathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
 };
 
 sandboxedFs.bind = (path, allowTmp = true) => {
-  const wrapped = Object.assign({}, fs);
+  const promises = Object.assign({}, fs.promises);
+  const wrappedPromises = fs.promises ? { promises } : null;
+  const wrapped = Object.assign({}, fs, wrappedPromises);
 
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
       const fn = fs[name];
-      if (!fn) continue;
-      wrapped[name] = type.wrapper(fn, path, allowTmp);
-      if (type.hasSyncCounterpart) {
-        const syncName = name + 'Sync';
-        wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
+      const promiseFn = fs.promises ? fs.promises[name] : null;
+      if (fn) {
+        wrapped[name] = type.wrapper(fn, path, allowTmp);
+        if (type.hasSyncCounterpart) {
+          const syncName = name + 'Sync';
+          wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
+        }
+      }
+      if (promiseFn) {
+        wrapped.promises[name] = type.asyncWrapper(promiseFn, path, allowTmp);
       }
     }
   }
