@@ -57,36 +57,50 @@ const makeFsArgSafe = (arg, path, allowTmp) => {
   return arg;
 };
 
-const stringPathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) => {
-  if (typeof p === 'string') {
-    p = pathModule.join(path, makePathSafe(p, allowTmp));
-  }
-  return func(p, ...args);
+const preserveName = (origFunc, wrappedFunc) => {
+  Object.defineProperty(wrappedFunc, 'name', { value: origFunc.name });
+  return wrappedFunc;
 };
 
-const pathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) =>
-  func(makeFsArgSafe(p, path, allowTmp), ...args);
+const stringPathFunctionsWrapper = (func, path, allowTmp) =>
+  preserveName(func, (p, ...args) => {
+    if (typeof p === 'string') {
+      p = pathModule.join(path, makePathSafe(p, allowTmp));
+    }
+    return func(p, ...args);
+  });
+
+const pathFunctionsWrapper = (func, path, allowTmp) =>
+  preserveName(func, (p, ...args) =>
+    func(makeFsArgSafe(p, path, allowTmp), ...args)
+  );
 
 const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
-  const f = pathFunctionsWrapper(func, path, allowTmp);
+  const f = preserveName(func, pathFunctionsWrapper(func, path, allowTmp));
   if (func.native) {
-    f.native = pathFunctionsWrapper(func.native, path, allowTmp);
+    f.native = preserveName(
+      func,
+      pathFunctionsWrapper(func.native, path, allowTmp)
+    );
   }
   return f;
 };
 
-const fileFunctionsWrapper = (func, path, allowTmp) => (file, ...args) => {
-  if (typeof file === 'number') {
-    return func(file, ...args);
-  }
-  return func(makeFsArgSafe(file, path, allowTmp), ...args);
-};
+const fileFunctionsWrapper = (func, path, allowTmp) =>
+  preserveName(func, (file, ...args) => {
+    if (typeof file === 'number') {
+      return func(file, ...args);
+    }
+    return func(makeFsArgSafe(file, path, allowTmp), ...args);
+  });
 
-const twoPathFunctionsWrapper = (func, path, allowTmp) => (p1, p2, ...args) =>
-  func(
-    makeFsArgSafe(p1, path, allowTmp),
-    makeFsArgSafe(p2, path, allowTmp),
-    ...args
+const twoPathFunctionsWrapper = (func, path, allowTmp) =>
+  preserveName(func, (p1, p2, ...args) =>
+    func(
+      makeFsArgSafe(p1, path, allowTmp),
+      makeFsArgSafe(p2, path, allowTmp),
+      ...args
+    )
   );
 
 const functionTypes = {
@@ -146,7 +160,10 @@ const functionTypes = {
 };
 
 sandboxedFs.bind = (path, allowTmp = true) => {
-  const wrapped = Object.assign({}, fs);
+  const wrapped = Object.defineProperties(
+    {},
+    Object.getOwnPropertyDescriptors(fs)
+  );
 
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
