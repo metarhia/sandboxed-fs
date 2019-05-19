@@ -154,15 +154,12 @@ const functionTypes = {
 };
 
 sandboxedFs.bind = (path, allowTmp = true) => {
-  const promises = Object.assign({}, fs.promises);
-  const wrappedPromises = fs.promises ? { promises } : null;
-  const wrapped = Object.assign({}, fs, wrappedPromises);
+  const wrapped = Object.assign({}, fs);
 
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
       const fn = fs[name];
-      const promiseFn = fs.promises ? fs.promises[name] : null;
       if (fn) {
         wrapped[name] = type.wrapper(fn, path, allowTmp);
         if (type.hasSyncCounterpart) {
@@ -170,11 +167,31 @@ sandboxedFs.bind = (path, allowTmp = true) => {
           wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
         }
       }
-      if (promiseFn) {
-        wrapped.promises[name] = type.asyncWrapper(promiseFn, path, allowTmp);
-      }
     }
   }
+
+  const promisesIsEnumerable = process.versions.node >= '12';
+
+  Object.defineProperty(wrapped, 'promises', {
+    configurable: true,
+    enumerable: promisesIsEnumerable,
+    get() {
+      if (!fs.promises) return fs.promises;
+
+      const wrappedPromises = Object.assign({}, fs.promises);
+
+      for (const type of Object.values(functionTypes)) {
+        for (const name of type.names) {
+          const fn = fs.promises[name];
+          if (fn) {
+            wrappedPromises[name] = type.asyncWrapper(fn, path, allowTmp);
+          }
+        }
+      }
+
+      return wrappedPromises;
+    },
+  });
 
   return wrapped;
 };
