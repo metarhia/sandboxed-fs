@@ -27,6 +27,7 @@
     "eslint-config-prettier": "^4.2.0",
     "eslint-plugin-import": "^2.17.2",
     "eslint-plugin-prettier": "^3.0.1",
+    "metatests": "^0.7.0",
     "prettier": "^1.17.0"
   },
   "engines": {
@@ -34,7 +35,7 @@
   },
   "readmeFilename": "README.md",
   "scripts": {
-    "test": "npm run lint && node test.js",
+    "test": "npm run lint && metatests test/",
     "lint": "eslint . && prettier -c \"**/*.js\" \"**/*.json\" \"**/*.md\" \".*rc\" \"**/*.yml\"",
     "fmt": "prettier --write \"**/*.js\" \"**/*.json\" \"**/*.md\" \".*rc\" \"**/*.yml\""
   }
