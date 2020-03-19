@@ -20,7 +20,8 @@
     "url": "https://github.com/metarhia/sandboxed-fs/issues",
     "email": "nbelochub@gmail.com"
   },
-  "main": "./sandboxed-fs.js",
+  "main": "sandboxed-fs.js",
+  "files": [],
   "devDependencies": {
     "eslint": "^5.16.0",
     "eslint-config-metarhia": "^7.0.0",
