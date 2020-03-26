@@ -6,15 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased][unreleased]
+## [0.3.3][] - 2020-03-26
+
+### Refreshed
+
+- Dependencies and fixed security issues
+- Dates in LICENSE file
+- Badges in README file
 
 ### Added
 
 - CHANGELOG.md file.
+- Node.js 13.x support
 
 ### Removed
 
 - Dropped support for Node.js 6.
+- Removed unneeded files from npm build
 
 ## [0.3.2][] - 2018-06-27
 
