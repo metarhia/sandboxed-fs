@@ -89,6 +89,9 @@ const twoPathFunctionsWrapper = (func, path, allowTmp) => (p1, p2, ...args) =>
     ...args
   );
 
+const asyncWrapper = wrapper => (...wrapperArgs) => async (...args) =>
+  wrapper(...wrapperArgs)(...args);
+
 const functionTypes = {
   pathFunctions: {
     names: [
@@ -110,16 +113,19 @@ const functionTypes = {
       'utimes',
     ],
     wrapper: pathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(pathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   stringPathFunctions: {
     names: ['mkdtemp'],
     wrapper: stringPathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(stringPathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   pathFunctionsWithNative: {
     names: ['realpath'],
     wrapper: pathFunctionsWithNativeWrapper,
+    asyncWrapper: asyncWrapper(pathFunctionsWithNativeWrapper),
     hasSyncCounterpart: true,
   },
   pathNonSyncFunctions: {
@@ -136,11 +142,13 @@ const functionTypes = {
   fileFunctions: {
     names: ['appendFile', 'readFile', 'writeFile'],
     wrapper: fileFunctionsWrapper,
+    asyncWrapper: asyncWrapper(fileFunctionsWrapper),
     hasSyncCounterpart: true,
   },
   twoPathFunctions: {
     names: ['copyFile', 'link', 'rename', 'symlink'],
     wrapper: twoPathFunctionsWrapper,
+    asyncWrapper: asyncWrapper(twoPathFunctionsWrapper),
     hasSyncCounterpart: true,
   },
 };
@@ -152,14 +160,38 @@ sandboxedFs.bind = (path, allowTmp = true) => {
     const type = functionTypes[typeName];
     for (const name of type.names) {
       const fn = fs[name];
-      if (!fn) continue;
-      wrapped[name] = type.wrapper(fn, path, allowTmp);
-      if (type.hasSyncCounterpart) {
-        const syncName = name + 'Sync';
-        wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
+      if (fn) {
+        wrapped[name] = type.wrapper(fn, path, allowTmp);
+        if (type.hasSyncCounterpart) {
+          const syncName = name + 'Sync';
+          wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
+        }
       }
     }
   }
+
+  const promisesIsEnumerable = process.versions.node >= '12';
+
+  Object.defineProperty(wrapped, 'promises', {
+    configurable: true,
+    enumerable: promisesIsEnumerable,
+    get() {
+      if (!fs.promises) return fs.promises;
+
+      const wrappedPromises = Object.assign({}, fs.promises);
+
+      for (const type of Object.values(functionTypes)) {
+        for (const name of type.names) {
+          const fn = fs.promises[name];
+          if (fn) {
+            wrappedPromises[name] = type.asyncWrapper(fn, path, allowTmp);
+          }
+        }
+      }
+
+      return wrappedPromises;
+    },
+  });
 
   return wrapped;
 };
