@@ -1,24 +1,23 @@
 'use strict';
 
-const sandboxedFs = {};
-module.exports = sandboxedFs;
-
 const fs = require('fs');
 const os = require('os');
-const pathModule = require('path');
+const path = require('path');
 const { URL } = require('url');
+
+const TMP_DIR = os.tmpdir();
 
 const isWindows =
   process.platform === 'win32' ||
   process.env.OSTYPE === 'cygwin' ||
   process.env.OSTYPE === 'msys';
 
-const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
+const isUncPath = (location) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(location);
 
-const makePathSafe = (path, allowTmp) => {
-  const safePath = pathModule.resolve('/', path);
+const makePathSafe = (location, allowTmp) => {
+  const safePath = path.resolve('/', location);
 
-  if (allowTmp && safePath.startsWith(os.tmpdir())) {
+  if (allowTmp && safePath.startsWith(TMP_DIR)) {
     return safePath;
   }
 
@@ -26,7 +25,7 @@ const makePathSafe = (path, allowTmp) => {
   // https://github.com/nodejs/node/blob/master/BUILDING.md#supported-platforms-1
   if (isWindows) {
     if (isUncPath(safePath)) {
-      return safePath.substring(pathModule.parse(safePath).root.length);
+      return safePath.substring(path.parse(safePath).root.length);
     } else {
       // If the path is a non-unc path on windows, the root is fixed to 3
       // characters like 'C:\'
@@ -37,63 +36,57 @@ const makePathSafe = (path, allowTmp) => {
   return safePath;
 };
 
-const makeFsArgSafe = (arg, path, allowTmp) => {
-  let safePath;
+const makeFsArgSafe = (arg, location, allowTmp) => {
   if (typeof arg === 'string' || Buffer.isBuffer(arg)) {
-    safePath = makePathSafe(arg.toString(), allowTmp);
-    if (allowTmp && safePath.startsWith(os.tmpdir())) {
-      arg = safePath;
-    } else {
-      arg = pathModule.join(path, safePath);
-    }
-  } else if (arg instanceof URL && arg.protocol === 'file:') {
-    safePath = makePathSafe(arg.pathname, allowTmp);
-    if (allowTmp && safePath.startsWith(os.tmpdir())) {
-      arg.pathname = safePath;
-    } else {
-      arg.pathname = pathModule.join(path, safePath);
-    }
+    const safePath = makePathSafe(arg.toString(), allowTmp);
+    const isTemp = allowTmp && safePath.startsWith(TMP_DIR);
+    return isTemp ? safePath : path.join(location, safePath);
+  }
+  if (arg instanceof URL && arg.protocol === 'file:') {
+    const safePath = makePathSafe(arg.pathname, allowTmp);
+    const isTemp = allowTmp && safePath.startsWith(TMP_DIR);
+    arg.pathname = isTemp ? safePath : path.join(location, safePath);
   }
   return arg;
 };
 
 const stringPathFunctionsWrapper =
-  (func, path, allowTmp) =>
-  (p, ...args) => {
-    if (typeof p === 'string') {
-      p = pathModule.join(path, makePathSafe(p, allowTmp));
-    }
-    return func(p, ...args);
-  };
+  (func, location, allowTmp) =>
+  (name, ...args) =>
+    func(
+      typeof name === 'string'
+        ? path.join(location, makePathSafe(name, allowTmp))
+        : name,
+      ...args,
+    );
 
 const pathFunctionsWrapper =
-  (func, path, allowTmp) =>
-  (p, ...args) =>
-    func(makeFsArgSafe(p, path, allowTmp), ...args);
+  (func, location, allowTmp) =>
+  (name, ...args) =>
+    func(makeFsArgSafe(name, location, allowTmp), ...args);
 
-const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
-  const f = pathFunctionsWrapper(func, path, allowTmp);
+const pathFunctionsWithNativeWrapper = (func, location, allowTmp) => {
+  const f = pathFunctionsWrapper(func, location, allowTmp);
   if (func.native) {
-    f.native = pathFunctionsWrapper(func.native, path, allowTmp);
+    f.native = pathFunctionsWrapper(func.native, location, allowTmp);
   }
   return f;
 };
 
 const fileFunctionsWrapper =
-  (func, path, allowTmp) =>
-  (file, ...args) => {
-    if (typeof file === 'number') {
-      return func(file, ...args);
-    }
-    return func(makeFsArgSafe(file, path, allowTmp), ...args);
-  };
+  (func, location, allowTmp) =>
+  (file, ...args) =>
+    func(
+      typeof file === 'number' ? file : makeFsArgSafe(file, location, allowTmp),
+      ...args,
+    );
 
 const twoPathFunctionsWrapper =
-  (func, path, allowTmp) =>
+  (func, location, allowTmp) =>
   (p1, p2, ...args) =>
     func(
-      makeFsArgSafe(p1, path, allowTmp),
-      makeFsArgSafe(p2, path, allowTmp),
+      makeFsArgSafe(p1, location, allowTmp),
+      makeFsArgSafe(p2, location, allowTmp),
       ...args,
     );
 
@@ -153,21 +146,21 @@ const functionTypes = {
   },
 };
 
-sandboxedFs.bind = (path, allowTmp = true) => {
+const bind = (location, allowTmp = true) => {
   const wrapped = Object.assign({}, fs);
-
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
       const fn = fs[name];
       if (!fn) continue;
-      wrapped[name] = type.wrapper(fn, path, allowTmp);
+      wrapped[name] = type.wrapper(fn, location, allowTmp);
       if (type.hasSyncCounterpart) {
         const syncName = name + 'Sync';
-        wrapped[syncName] = type.wrapper(fs[syncName], path, allowTmp);
+        wrapped[syncName] = type.wrapper(fs[syncName], location, allowTmp);
       }
     }
   }
-
   return wrapped;
 };
+
+module.exports = { bind };
