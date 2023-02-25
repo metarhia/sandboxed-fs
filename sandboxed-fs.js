@@ -13,7 +13,7 @@ const isWindows =
   process.env.OSTYPE === 'cygwin' ||
   process.env.OSTYPE === 'msys';
 
-const isUncPath = path => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
+const isUncPath = (path) => /^[\\/]{2,}[^\\/]+[\\/]+[^\\/]+/.test(path);
 
 const makePathSafe = (path, allowTmp) => {
   const safePath = pathModule.resolve('/', path);
@@ -57,15 +57,19 @@ const makeFsArgSafe = (arg, path, allowTmp) => {
   return arg;
 };
 
-const stringPathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) => {
-  if (typeof p === 'string') {
-    p = pathModule.join(path, makePathSafe(p, allowTmp));
-  }
-  return func(p, ...args);
-};
+const stringPathFunctionsWrapper =
+  (func, path, allowTmp) =>
+  (p, ...args) => {
+    if (typeof p === 'string') {
+      p = pathModule.join(path, makePathSafe(p, allowTmp));
+    }
+    return func(p, ...args);
+  };
 
-const pathFunctionsWrapper = (func, path, allowTmp) => (p, ...args) =>
-  func(makeFsArgSafe(p, path, allowTmp), ...args);
+const pathFunctionsWrapper =
+  (func, path, allowTmp) =>
+  (p, ...args) =>
+    func(makeFsArgSafe(p, path, allowTmp), ...args);
 
 const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
   const f = pathFunctionsWrapper(func, path, allowTmp);
@@ -75,19 +79,23 @@ const pathFunctionsWithNativeWrapper = (func, path, allowTmp) => {
   return f;
 };
 
-const fileFunctionsWrapper = (func, path, allowTmp) => (file, ...args) => {
-  if (typeof file === 'number') {
-    return func(file, ...args);
-  }
-  return func(makeFsArgSafe(file, path, allowTmp), ...args);
-};
+const fileFunctionsWrapper =
+  (func, path, allowTmp) =>
+  (file, ...args) => {
+    if (typeof file === 'number') {
+      return func(file, ...args);
+    }
+    return func(makeFsArgSafe(file, path, allowTmp), ...args);
+  };
 
-const twoPathFunctionsWrapper = (func, path, allowTmp) => (p1, p2, ...args) =>
-  func(
-    makeFsArgSafe(p1, path, allowTmp),
-    makeFsArgSafe(p2, path, allowTmp),
-    ...args
-  );
+const twoPathFunctionsWrapper =
+  (func, path, allowTmp) =>
+  (p1, p2, ...args) =>
+    func(
+      makeFsArgSafe(p1, path, allowTmp),
+      makeFsArgSafe(p2, path, allowTmp),
+      ...args,
+    );
 
 const functionTypes = {
   pathFunctions: {
