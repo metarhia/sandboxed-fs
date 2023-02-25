@@ -1,11 +1,10 @@
 {
   "singleQuote": true,
-  "trailingComma": "es5",
+  "trailingComma": "all",
   "overrides": [
     {
-      "files": ".prettierrc",
+      "files": ["**/.*rc", "**/*.json"],
       "options": { "parser": "json" }
     }
-  ],
-  "arrowParens": "avoid"
+  ]
 }
