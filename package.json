@@ -23,12 +23,12 @@
   "main": "sandboxed-fs.js",
   "files": [],
   "devDependencies": {
-    "eslint": "^7.5.0",
-    "eslint-config-metarhia": "^7.0.0",
-    "eslint-config-prettier": "^6.10.0",
-    "eslint-plugin-import": "^2.20.1",
-    "eslint-plugin-prettier": "^3.1.2",
-    "prettier": "^2.0.5"
+    "eslint": "^8.34.0",
+    "eslint-config-metarhia": "^8.1.0",
+    "eslint-config-prettier": "^8.6.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.8.4"
   },
   "engines": {
     "node": ">=8.0.0"
