@@ -112,16 +112,19 @@ const functionTypes = {
     ],
     wrapper: pathFunctionsWrapper,
     hasSyncCounterpart: true,
+    isPromises: true,
   },
   stringPathFunctions: {
     names: ['mkdtemp'],
     wrapper: stringPathFunctionsWrapper,
     hasSyncCounterpart: true,
+    isPromises: true,
   },
   pathFunctionsWithNative: {
     names: ['realpath'],
     wrapper: pathFunctionsWithNativeWrapper,
     hasSyncCounterpart: true,
+    isPromises: true,
   },
   pathNonSyncFunctions: {
     names: [
@@ -133,33 +136,42 @@ const functionTypes = {
     ],
     wrapper: pathFunctionsWrapper,
     hasSyncCounterpart: false,
+    isPromises: false,
   },
   fileFunctions: {
     names: ['appendFile', 'readFile', 'writeFile'],
     wrapper: fileFunctionsWrapper,
     hasSyncCounterpart: true,
+    isPromises: true,
   },
   twoPathFunctions: {
     names: ['copyFile', 'link', 'rename', 'symlink'],
     wrapper: twoPathFunctionsWrapper,
     hasSyncCounterpart: true,
+    isPromises: true,
   },
 };
 
 const bind = (location, allowTmp = true) => {
   const wrapped = Object.assign({}, fs);
+  const wrapFunction = (fn, wrapper) => wrapper(fn, location, allowTmp);
   for (const typeName of Object.keys(functionTypes)) {
     const type = functionTypes[typeName];
     for (const name of type.names) {
       const fn = fs[name];
       if (!fn) continue;
-      wrapped[name] = type.wrapper(fn, location, allowTmp);
+      wrapped[name] = wrapFunction(fn, type.wrapper);
       if (type.hasSyncCounterpart) {
         const syncName = name + 'Sync';
-        wrapped[syncName] = type.wrapper(fs[syncName], location, allowTmp);
+        wrapped[syncName] = wrapFunction(fs[syncName], type.wrapper);
+      }
+      if (type.isPromises) {
+        const promisesFn = fs.promises[name];
+        wrapped.promises[name] = wrapFunction(promisesFn, type.wrapper);
       }
     }
   }
+
   return wrapped;
 };
 
